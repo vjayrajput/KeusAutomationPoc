@@ -18,6 +18,7 @@ import '../domain/usecases/get_hit_of_week_products_use_case.dart';
 import '../domain/usecases/get_product_by_category_use_case.dart';
 import '../domain/usecases/increase_cutlery_count_use_case.dart';
 import '../domain/usecases/increase_product_quantity_use_case.dart';
+import '../presentation/bloc/cart/cart_bloc.dart';
 import '../presentation/bloc/product/product_bloc.dart';
 
 final getIt = GetIt.instance;
@@ -78,5 +79,14 @@ void setupDependencies() {
         getIt<GetCategoriesUseCase>(),
         getIt<GetHitOfWeekProductsUseCase>(),
         getIt<GetProductByCategoryUseCase>(),
+      ));
+  getIt.registerFactory(() => CartBloc(
+        getIt<AddToCartUseCase>(),
+        getIt<DecreaseCutleryCountUseCase>(),
+        getIt<DecreaseProductQuantityUseCase>(),
+        getIt<FetchCartItemsUseCase>(),
+        getIt<GetCutleryCountUseCase>(),
+        getIt<IncreaseCutleryCountUseCase>(),
+        getIt<IncreaseProductQuantityUseCase>(),
       ));
 }
