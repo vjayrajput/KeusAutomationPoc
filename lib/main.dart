@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'core/constants/strings.dart';
 import 'di/di.dart';
 import 'presentation/bloc/cart/cart_bloc.dart';
 import 'presentation/bloc/product/product_bloc.dart';
@@ -17,7 +18,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: Strings.foodUI,
       theme: ThemeData(
         primaryColor: Colors.black,
         scaffoldBackgroundColor: Colors.white,
@@ -30,7 +31,7 @@ class MyApp extends StatelessWidget {
           bodyMedium: TextStyle(color: Colors.grey[800]),
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Colors.black,
+          backgroundColor: Colors.black, // Button color
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
