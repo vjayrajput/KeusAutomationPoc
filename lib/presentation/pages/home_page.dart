@@ -1,89 +1,193 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:keus_automation_poc/core/extensions/toast_extension.dart';
+
+import '../../core/constants/strings.dart';
+import '../bloc/cart/cart_bloc.dart';
+import '../bloc/cart/cart_event.dart';
+import '../bloc/cart/cart_state.dart';
+import '../bloc/product/product_bloc.dart';
+import '../bloc/product/product_event.dart';
+import '../bloc/product/product_state.dart';
+import '../models/product_ui_model.dart';
+import '../widgets/home/dummy_drawer_items.dart';
+import '../widgets/home/home_banner_section_widget.dart';
+import '../widgets/home/home_app_bar.dart';
+import '../widgets/home/home_cart_section_widget.dart';
+import '../widgets/home/home_category_section_widget.dart';
+import '../widgets/home/home_products_section_widget.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+  const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<StatefulWidget> createState() {
+    return _HomePageState();
+  }
 }
 
 class _HomePageState extends State<HomePage> {
-  int _counter = 0;
+  late final CartBloc cartBloc;
+  late final ProductBloc productBloc;
+  List<String> categories = [];
+  List<ProductUiModel> hitOfWeekProducts = [];
+  List<ProductUiModel> categoryProducts = [];
+  bool isCartVisible = false;
+  double totalPrice = 0;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  @override
+  void initState() {
+    super.initState();
+    cartBloc = BlocProvider.of<CartBloc>(context);
+    productBloc = BlocProvider.of<ProductBloc>(context);
+
+    _fetchInitialData();
+  }
+
+  void _fetchInitialData() {
+    productBloc.add(FetchCategoriesEvent());
+    productBloc.add(FetchHitOfWeekProductsEvent());
+    cartBloc.add(FetchCartItemsEvent());
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+    final scaffoldKey = GlobalKey<ScaffoldState>();
+
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<CartBloc, CartState>(
+          listener: _cartBlocListener,
+        ),
+        BlocListener<ProductBloc, ProductState>(
+          listener: _productBlocListener,
+        ),
+      ],
+      child: Scaffold(
+        key: scaffoldKey,
+        drawer: Drawer(child: DummyDrawerItems()),
+        onDrawerChanged: (isOpened) {
+          if (!isOpened) setState(() {});
+        },
+        appBar: HomeAppBar(
+          title: Strings.dummyTitle,
+          onLeftIconTap: () => scaffoldKey.currentState?.openDrawer(),
+          onRightIconTap: () => context.showToast(Strings.searchIconPressed),
+          onTitleTap: () => context.showToast(Strings.addressTitlePressed),
+        ),
+        body: BlocBuilder<CartBloc, CartState>(
+          builder: (context, state) {
+            return SafeArea(
+              child: Stack(
+                children: [
+                  _buildCustomScrollView(),
+                  if (isCartVisible) _buildCartSection(),
+                ],
+              ),
+            );
+          },
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+
+  Widget _buildCustomScrollView() {
+    return CustomScrollView(
+      physics: const ClampingScrollPhysics(),
+      slivers: [
+        if (hitOfWeekProducts.isNotEmpty)
+          SliverToBoxAdapter(
+            child: HomeBannerSection(
+              pageController: PageController(),
+              bannerProducts: hitOfWeekProducts,
+              onItemTap: _openProductDetails,
+            ),
+          ),
+        SliverToBoxAdapter(
+          child: HomeCategorySection(
+            categories: categories,
+            onFilterTap: () => context.showToast(Strings.filterIconPressed),
+            onItemTap: _fetchProductsByCategory,
+          ),
+        ),
+        BlocBuilder<ProductBloc, ProductState>(
+          builder: (context, productState) {
+            if (productState is ProductsByCategoryLoaded) {
+              categoryProducts = productState.categoryProducts;
+            }
+            return HomeProductsSection(
+              products: categoryProducts,
+              onItemTap: _openProductDetails,
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Positioned _buildCartSection() {
+    return Positioned(
+      left: 20,
+      right: 20,
+      bottom: 20,
+      child: InkWell(
+        onTap: () => _openCartDetails(),
+        child: HomeCartSection(totalPrice: totalPrice),
+      ),
+    );
+  }
+
+  void _openProductDetails(ProductUiModel product) {
+
+  }
+
+  void _fetchProductsByCategory(String category) {
+    print("_fetchProductsByCategory category : $category");
+    productBloc.add(FetchProductsByCategoryEvent(category));
+  }
+
+  void _openCartDetails() {
+
+  }
+
+  void _cartBlocListener(BuildContext context, CartState state) {
+    if (state is CartSuccess) {
+      isCartVisible = state.cartItems.isNotEmpty;
+      totalPrice = state.total;
+    } else if (state is CartError) {
+      _showSnackBar("Cart error: ${state.errorMessage}");
+    }
+  }
+
+  void _productBlocListener(BuildContext context, ProductState state) {
+    if (state is HitOfWeekProductsLoaded) {
+      hitOfWeekProducts = state.hitOfWeekProducts;
+    } else if (state is CategoriesLoaded) {
+      categories = state.categories;
+    } else if (state is ProductsByCategoryLoaded) {
+      categoryProducts = state.categoryProducts;
+    } else if (state is ProductError) {
+      _showSnackBar("Product error: ${state.errorMessage}");
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void openBottomSheet({
+    required BuildContext context,
+    required Widget child,
+    bool isScrollControlled = true,
+    bool isTransparentBackground = true,
+  }) {
+    showModalBottomSheet(
+      backgroundColor:
+          isTransparentBackground ? Colors.transparent : Colors.white,
+      context: context,
+      isScrollControlled: isScrollControlled,
+      builder: (context) => child,
     );
   }
 }
