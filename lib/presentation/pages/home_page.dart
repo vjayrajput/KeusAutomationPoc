@@ -16,6 +16,7 @@ import '../widgets/home/home_banner_section_widget.dart';
 import '../widgets/home/home_cart_section_widget.dart';
 import '../widgets/home/home_category_section_widget.dart';
 import '../widgets/home/home_products_section_widget.dart';
+import 'cart_detail_page.dart';
 import 'product_detail_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -153,7 +154,15 @@ class _HomePageState extends State<HomePage> {
     productBloc.add(FetchProductsByCategoryEvent(category));
   }
 
-  void _openCartDetails() {}
+  void _openCartDetails() {
+    openBottomSheet(
+      context: context,
+      child: BlocProvider.value(
+        value: cartBloc,
+        child: const CartDetails(),
+      ),
+    );
+  }
 
   void _cartBlocListener(BuildContext context, CartState state) {
     if (state is CartSuccess) {
