@@ -11,11 +11,12 @@ import '../bloc/product/product_event.dart';
 import '../bloc/product/product_state.dart';
 import '../models/product_ui_model.dart';
 import '../widgets/home/dummy_drawer_items.dart';
-import '../widgets/home/home_banner_section_widget.dart';
 import '../widgets/home/home_app_bar.dart';
+import '../widgets/home/home_banner_section_widget.dart';
 import '../widgets/home/home_cart_section_widget.dart';
 import '../widgets/home/home_category_section_widget.dart';
 import '../widgets/home/home_products_section_widget.dart';
+import 'product_detail_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -138,7 +139,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _openProductDetails(ProductUiModel product) {
-
+    openBottomSheet(
+      context: context,
+      child: BlocProvider.value(
+        value: cartBloc,
+        child: ProductDetails(product: product),
+      ),
+    );
   }
 
   void _fetchProductsByCategory(String category) {
@@ -146,9 +153,7 @@ class _HomePageState extends State<HomePage> {
     productBloc.add(FetchProductsByCategoryEvent(category));
   }
 
-  void _openCartDetails() {
-
-  }
+  void _openCartDetails() {}
 
   void _cartBlocListener(BuildContext context, CartState state) {
     if (state is CartSuccess) {
